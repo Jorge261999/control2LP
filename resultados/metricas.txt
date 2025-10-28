@@ -1,0 +1,4 @@
+Metricas (5 iteraciones)
+Especulativo: 61.191987ms
+Secuencial: 54.482115ms
+Speedup: 0.89x
