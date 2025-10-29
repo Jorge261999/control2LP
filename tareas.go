@@ -10,7 +10,7 @@ import (
 )
 
 // Funcion que simula un Proof-of-Work, para encontrar un hash con cierta dificultad
-func SimularProofOfWork(blockData string, dificultad int) (string, int) {
+func SimularProofOfWork(blockData string, dificultad int, stop <-chan struct{}) (string, int) {
 	targetPrefix := strings.Repeat("0", dificultad)
 	nonce := 0
 
@@ -19,6 +19,15 @@ func SimularProofOfWork(blockData string, dificultad int) (string, int) {
 	maxDuration := 3 * time.Second
 
 	for time.Since(start) < maxDuration {
+		// chequeo de cancelacion no bloqueante
+		if stop != nil {
+			select {
+			case <-stop:
+				return fmt.Sprintf("cancelled_%d", nonce), nonce
+			default:
+			}
+		}
+
 		data := fmt.Sprintf("%s%d", blockData, nonce)
 		hashBytes := sha256.Sum256([]byte(data))
 		hashString := fmt.Sprintf("%x", hashBytes)
@@ -38,13 +47,22 @@ func SimularProofOfWork(blockData string, dificultad int) (string, int) {
 }
 
 // EncontrarPrimos encuentra numeros primos hasta un maximo dado de 50,000 para evitar ejecuciones largas
-func EncontrarPrimos(max int) []int {
+func EncontrarPrimos(max int, stop <-chan struct{}) []int {
 	if max > 50000 {
 		max = 50000 // Limitar para pruebas rapidas
 	}
 
 	var primes []int
 	for i := 2; i < max; i++ {
+		// chequeo de cancelacion no bloqueante
+		if stop != nil {
+			select {
+			case <-stop:
+				return []int{}
+			default:
+			}
+		}
+
 		isPrime := true
 		for j := 2; j*j <= i; j++ {
 			if i%j == 0 {

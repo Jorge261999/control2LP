@@ -13,23 +13,35 @@ type Resultado struct {
 }
 
 // EjecutarRamaA ejecuta la primera rama especulativa
-func ejecutarRamaA(data string, dificultad int, resultadoChan chan Resultado) {
+func ejecutarRamaA(data string, dificultad int, stop <-chan struct{}, resultadoChan chan Resultado) {
 	fmt.Println("  Rama A: Iniciando Proof-of-Work...")
-	hash, nonce := SimularProofOfWork(data, dificultad)
+	hash, nonce := SimularProofOfWork(data, dificultad, stop)
+	resultado := hash
+	if len(hash) >= 9 && hash[:9] == "cancelled_" {
+		resultado = fmt.Sprintf("cancelled (nonce %d)", nonce)
+	}
 	resultadoChan <- Resultado{
 		rama:  "A",
-		valor: fmt.Sprintf("Hash: %s, Nonce: %d", hash, nonce),
+		valor: fmt.Sprintf("Hash: %s, Nonce: %d", resultado, nonce),
 	}
 	fmt.Println("  Rama A: Resultado enviado")
 }
 
 // ejecutarRamaB ejecuta la segunda rama especulativa
-func ejecutarRamaB(max int, resultadoChan chan Resultado) {
+func ejecutarRamaB(max int, stop <-chan struct{}, resultadoChan chan Resultado) {
 	fmt.Println("  Rama B: Buscando numeros primos...")
-	primos := EncontrarPrimos(max)
-	resultadoChan <- Resultado{
-		rama:  "B",
-		valor: fmt.Sprintf("Encontrados %d numeros primos", len(primos)),
+	primos := EncontrarPrimos(max, stop)
+	if len(primos) == 0 {
+		resultado := "cancelled or none"
+		resultadoChan <- Resultado{
+			rama:  "B",
+			valor: resultado,
+		}
+	} else {
+		resultadoChan <- Resultado{
+			rama:  "B",
+			valor: fmt.Sprintf("Encontrados %d numeros primos", len(primos)),
+		}
 	}
 	fmt.Println("  Rama B: Resultado enviado")
 }
@@ -42,9 +54,13 @@ func EjecutarEspeculativo(n, umbral int, archivoSalida string) (time.Duration, s
 	// Canal para recibir resultados de las ramas
 	resultadoChan := make(chan Resultado, 2)
 
-	// Iniciar ambas ramas en goroutines
-	go ejecutarRamaA("blockdata", 2, resultadoChan) // Dificultad 2 para evitar pruebas largas
-	go ejecutarRamaB(10000, resultadoChan)          // Solo hasta 10,000 para evitar pruebas largas
+	// Crear canales de cancelacion para cada rama
+	stopA := make(chan struct{})
+	stopB := make(chan struct{})
+
+	// Iniciar ambas ramas en goroutines, pasando su respectivo canal de stop
+	go ejecutarRamaA("blockdata", 2, stopA, resultadoChan) // Dificultad 2 para evitar pruebas largas
+	go ejecutarRamaB(10000, stopB, resultadoChan)          // Solo hasta 10,000 para evitar pruebas largas
 
 	// Calcular traza de producto de matrices
 	fmt.Println("Evaluando condicion (calculando traza de matrices)...")
@@ -54,8 +70,12 @@ func EjecutarEspeculativo(n, umbral int, archivoSalida string) (time.Duration, s
 	var ramaGanadora string
 	if traza > umbral {
 		ramaGanadora = "A"
+		// cancelar B
+		close(stopB)
 	} else {
 		ramaGanadora = "B"
+		// cancelar A
+		close(stopA)
 	}
 
 	fmt.Printf("Condicion evaluada - Traza: %d, Umbral: %d, Rama ganadora: %s\n", traza, umbral, ramaGanadora)

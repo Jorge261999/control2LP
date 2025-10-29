@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-// deinir flags y funciones principales
+// definir flags y funciones principales
 func main() {
 	n := flag.Int("n", 80, "Dimension de las matrices para calcular traza")
 	umbral := flag.Int("umbral", 100000, "Umbral para decidir rama ganadora")
 	archivo := flag.String("archivo", "resultados/metricas.txt", "Archivo para guardar metricas")
 	modo := flag.String("modo", "especulativo", "Modo de ejecucion: especulativo|secuencial|comparar")
-	iteraciones := flag.Int("iter", 3, "Iteraciones para modo comparar")
+	iteraciones := flag.Int("iter", 30, "Iteraciones para modo comparar")
 
 	flag.Parse()
 	// Crear directorio para resultados si no existe

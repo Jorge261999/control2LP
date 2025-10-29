@@ -24,12 +24,12 @@ func EjecutarSecuencial(n, umbral int, archivoSalida string) (time.Duration, str
 	if traza > umbral {
 		ramaEjecutada = "A"
 		fmt.Println("Ejecutando Rama A (Proof-of-Work)...")
-		hash, nonce := SimularProofOfWork("blockdata", 2)
+		hash, nonce := SimularProofOfWork("blockdata", 2, nil)
 		resultado = fmt.Sprintf("Hash: %s, Nonce: %d", hash, nonce)
 	} else {
 		ramaEjecutada = "B"
 		fmt.Println("Ejecutando Rama B (Busqueda de primos)...")
-		primos := EncontrarPrimos(10000)
+		primos := EncontrarPrimos(10000, nil)
 		resultado = fmt.Sprintf("Encontrados %d numeros primos", len(primos))
 	}
 
